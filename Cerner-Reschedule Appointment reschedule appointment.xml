@@ -1,0 +1,221 @@
+<connector version="3.9.1">
+  <metaDataId>2</metaDataId>
+  <name>reschedule appointment</name>
+  <properties class="com.mirth.connect.connectors.js.JavaScriptDispatcherProperties" version="3.9.1">
+    <pluginProperties/>
+    <destinationConnectorProperties version="3.9.1">
+      <queueEnabled>false</queueEnabled>
+      <sendFirst>false</sendFirst>
+      <retryIntervalMillis>10000</retryIntervalMillis>
+      <regenerateTemplate>false</regenerateTemplate>
+      <retryCount>0</retryCount>
+      <rotate>false</rotate>
+      <includeFilterTransformer>false</includeFilterTransformer>
+      <threadCount>1</threadCount>
+      <threadAssignmentVariable></threadAssignmentVariable>
+      <validateResponse>false</validateResponse>
+      <resourceIds class="linked-hash-map">
+        <entry>
+          <string>Default Resource</string>
+          <string>[Default Resource]</string>
+        </entry>
+      </resourceIds>
+      <queueBufferSize>1000</queueBufferSize>
+      <reattachAttachments>true</reattachAttachments>
+    </destinationConnectorProperties>
+    <script> var accessToken =  sourceMap.get(&apos;accessToken&apos;); 
+ var eventData = sourceMap.get(&apos;eventData&apos;);
+ logger.info(&quot;access token in reschedule chn=&quot;+accessToken);
+ 
+  var id= sourceMap.get(&apos;id&apos;);
+
+  var channelIntegration = globalMap.get(&apos;chaneelCernerIntegration&apos;);
+  
+   var baseMap = Maps.map()
+				.add(&apos;sourceChannelId&apos;, channelId)
+				.add(&apos;sourceChannelName&apos;, channelName)
+				.add(&apos;sourceMessageId&apos;, connectorMessage.getMessageId().toString())
+				.add(&apos;eventData&apos;, eventData)  
+				.add(&apos;accessToken&apos;,accessToken)
+				.add(&apos;id&apos;,id)
+
+     var appointmentRequest = new RawMessage(&quot;&quot;, [1], baseMap);
+     var appointmentLookUPResponse = router.routeMessageByChannelId(channelIntegration, appointmentRequest);
+
+   if (appointmentLookUPResponse.getStatus() != &apos;SENT&apos;) 
+   {
+		channelMap.put(&apos;http-status-code&apos;, &apos;400&apos;);
+		channelMap.put(&apos;http-content-type&apos;, &apos;application/json&apos;);
+		logger.info(&quot;Error&quot;+appointmentLookUPResponse.getError());
+		return appointmentLookUPResponse.getError();
+  }
+	
+ var msg = JSON.parse(appointmentLookUPResponse.getMessage());
+ logger.info(&quot;respo in res chn=&quot;+msg.meta.versionId);
+ 
+ var location = msg.participant[0].actor.reference;
+ var locationName =msg.participant[0].actor.display;
+ var patientId= msg.participant[6].actor.reference;
+  var reasonCode=msg.reasonCode[0].text;
+  
+ logger.info(&quot;location=&quot;+location);
+ logger.info(&quot;patientId=&quot;+patientId);
+ logger.info(&apos;location name=&apos;+locationName);
+ logger.info(&apos;reasonCode=&apos;+reasonCode);
+
+ 
+  logger.info(&quot;eventdata going to =&quot;+eventData);
+// return appointmentLookUPResponse.getMessage();
+/
+   channelMap.put(&apos;patientId&apos;,patientId);
+   channelMap.put(&apos;location&apos;,location);
+    channelMap.put(&apos;locationName&apos;,locationName);
+   channelMap.put(&apos;reasonCode&apos;,reasonCode);
+
+
+
+// create new appointment
+     var start= sourceMap.get(&apos;start&apos;);
+      var end= sourceMap.get(&apos;end&apos;);
+   
+  var Data= {
+  &quot;resourceType&quot;: &quot;Appointment&quot;,
+  &quot;status&quot;: &quot;proposed&quot;,
+  &quot;serviceType&quot;: [
+    {
+      &quot;coding&quot;: [
+        {
+          &quot;code&quot;: &quot;408443003&quot;,
+          &quot;system&quot;: &quot;http://snomed.info/sct&quot;
+        }
+      ]
+    }
+  ],
+  &quot;reasonCode&quot;: [
+    {
+      &quot;text&quot;: $(&apos;reasonCode&apos;)
+    }
+  ],
+  &quot;comment&quot;: &quot;Appointment request comment&quot;,
+  &quot;participant&quot;: [
+    {
+      &quot;actor&quot;: {
+        &quot;reference&quot;: $(&apos;patientId&apos;)
+      },
+      &quot;status&quot;: &quot;needs-action&quot;
+    },
+       {
+      &quot;actor&quot;: {
+        &quot;reference&quot;:$(&apos;location&apos;) ,
+        &quot;display&quot;: $(&apos;locationName&apos;)
+      },
+      &quot;status&quot;: &quot;needs-action&quot;
+    }
+  ],
+  &quot;requestedPeriod&quot;: [
+    {
+      &quot;start&quot;: $(&apos;start&apos;),
+      &quot;end&quot;: $(&apos;end&apos;)
+    }
+  ]
+}
+ logger.info(&quot;data =&quot;+JSON.stringify(Data));
+  var Data1=JSON.stringify(Data);
+  var baseMap = Maps.map()
+				.add(&apos;sourceChannelId&apos;, channelId)
+				.add(&apos;sourceChannelName&apos;, channelName)
+				.add(&apos;sourceMessageId&apos;, connectorMessage.getMessageId().toString())
+		          .add(&apos;eventData&apos;,Data1)
+		          .add(&apos;accessToken&apos;,accessToken)
+		          .add(&apos;isCreateAppointment&apos;,true);
+				
+
+var AppointRequest = new RawMessage(&quot;&quot;, [3], baseMap);
+var AppointResponse = router.routeMessageByChannelId(channelIntegration,AppointRequest); 
+
+if (AppointResponse.getStatus() != &apos;SENT&apos;) {
+	channelMap.put(&apos;http-status-code&apos;, &apos;400&apos;);
+	logger.info(&apos;error=&apos;+AppointResponse);
+	return AppointResponse;
+}
+  //logger.info(&quot;resposnse ....=&quot;+AppointResponse.getMessage());
+ // return AppointResponse.getMessage();
+
+
+
+ //cancel appointment
+  var Data2=[
+  {
+    &quot;op&quot;: &quot;replace&quot;,
+    &quot;path&quot;: &quot;/status&quot;,
+    &quot;value&quot;: &quot;cancelled&quot;
+  }
+];
+ var baseMap = Maps.map()
+			.add(&apos;sourceChannelId&apos;, channelId)
+			.add(&apos;sourceChannelName&apos;, channelName)
+		     .add(&apos;sourceMessageId&apos;, connectorMessage.getMessageId().toString())
+			.add(&apos;eventData&apos;, Data2)  
+			.add(&apos;accessToken&apos;,accessToken)
+			.add(&apos;id&apos;,id)
+		    .add(&apos;isCancelledAppointment&apos;,true)
+			
+ var appointmentRequest = new RawMessage(&quot;&quot;, [6], baseMap);
+ var appointmentLookUPResponse = router.routeMessageByChannelId(channelIntegration, appointmentRequest);
+
+ if (appointmentLookUPResponse.getStatus() != &apos;SENT&apos;) 
+   {
+		channelMap.put(&apos;http-status-code&apos;, &apos;400&apos;);
+		channelMap.put(&apos;http-content-type&apos;, &apos;application/json&apos;);
+    	logger.info(&quot;Error&quot;+appointmentLookUPResponse.getError());
+		return appointmentLookUPResponse.getError();
+   }	
+   var rescheduleResponse={&quot;status&quot;:&quot;Reschedule&quot;};
+   //appointmentLookUPResponse.getMessage();
+   return JSON.stringify(rescheduleResponse);
+  
+
+				</script>
+  </properties>
+  <transformer version="3.9.1">
+    <elements/>
+    <inboundDataType>RAW</inboundDataType>
+    <outboundDataType>RAW</outboundDataType>
+    <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.9.1">
+      <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.9.1">
+        <splitType>JavaScript</splitType>
+        <batchScript></batchScript>
+      </batchProperties>
+    </inboundProperties>
+    <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.9.1">
+      <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.9.1">
+        <splitType>JavaScript</splitType>
+        <batchScript></batchScript>
+      </batchProperties>
+    </outboundProperties>
+  </transformer>
+  <responseTransformer version="3.9.1">
+    <elements/>
+    <inboundDataType>RAW</inboundDataType>
+    <outboundDataType>RAW</outboundDataType>
+    <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.9.1">
+      <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.9.1">
+        <splitType>JavaScript</splitType>
+        <batchScript></batchScript>
+      </batchProperties>
+    </inboundProperties>
+    <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.9.1">
+      <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.9.1">
+        <splitType>JavaScript</splitType>
+        <batchScript></batchScript>
+      </batchProperties>
+    </outboundProperties>
+  </responseTransformer>
+  <filter version="3.9.1">
+    <elements/>
+  </filter>
+  <transportName>JavaScript Writer</transportName>
+  <mode>DESTINATION</mode>
+  <enabled>true</enabled>
+  <waitForPrevious>true</waitForPrevious>
+</connector>
