@@ -48,10 +48,10 @@
             <input type="text" class="input-field" id="firstName" placeholder="First Name" required>
             <input type="text" class="input-field" id="lastName" placeholder="Last Name" required>
             <input type="text" class="input-field" id="mobileno" placeholder="Mobile No" required>
-            <input type="text" class="input-field" id="username" placeholder="username" required>
+            <input type="text" class="input-field" id="userName" placeholder="username" required>
             <input type="text" class="input-field" id="password" placeholder="password" required>
             <input type="text" class="input-field" id="email" placeholder="email" required>
-           <button type="submit" class="submit-btn">Register</button>
+           <button type="button" class="submit-btn" onclick="userregitser()">Register</button>
         </form>
       </div>
      </div>
@@ -105,6 +105,69 @@
      })
     .catch(error => console.log(error));
    }
+
+    function userregitser()
+    {
+
+      var firstName =document.getElementById('firstName').value;
+     var lastName =document.getElementById('lastName').value;
+     var mobileno=document.getElementById('mobileno').value;
+     var username=document.getElementById('userName').value;
+     var password =document.getElementById('password').value;
+     var email=document.getElementById('email').value;
+
+      console.log('firstname=',firstName);
+      console.log('lastName=',lastName);
+      console.log('mobileno=',mobileno);
+      console.log('username=',username);
+      console.log(' password=',password);
+      console.log('email=',email);
+      
+    const data =  [{
+  "firstName": `${firstName}`,
+  "lastName": `${lastName}`,
+  "mobileNo": `${mobileno}`,
+  "userName": `${username}`,
+  "pwd": `${password}`,
+  "email": `${email}`,
+ }] ;
+ var result;
+ var url=`http://localhost:8087/register/postuser`;
+  fetch(url, {
+  method: 'POST', 
+  // headers: {
+  //   'Content-Type': 'application/json',
+  //   'Access-Control-Allow-Origin': '*'
+  // },
+ //   credentials: 'include',
+  body: JSON.stringify(data),
+
+  })
+    .then(response => response.json())
+    .then(json=> 
+     {  
+        //  console.log(json)
+        result=json;
+        console.log(result);
+         var err=result.error;
+        //  console.log("error "+err);
+         if(err)
+         {
+             alert("Error in registration");
+    
+         }
+          else{
+               alert("Registration successful");
+              //  window.location.href="index.html";
+          }
+     })
+  //   .then(data => {
+  //   console.log('Success:', data);
+  //  })
+  .catch((error) => {
+  console.error('Error:', error);
+  });
+    }
      </script>
 
 </body>
